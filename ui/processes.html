@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="taskboard-version" content="0.1.0">
+<title>Processes</title>
+<link rel="stylesheet" href="../__picode/tokens.css">
+<style>
+  :root {
+    --bg: var(--pc-bg);
+    --panel: var(--pc-panel);
+    --elev: var(--pc-elevated);
+    --hover: var(--pc-hover);
+    --line: var(--pc-border);
+    --line-strong: var(--pc-border-strong);
+    --text: var(--pc-text);
+    --muted: var(--pc-text-muted);
+    --accent: var(--pc-accent);
+    --accent-fill: var(--pc-accent-fill);
+    --on-accent: var(--pc-on-accent);
+    --ok: var(--pc-ok);
+    --warn: var(--pc-warn);
+    --danger: var(--pc-danger);
+    --radius: var(--pc-radius);
+    --radius-panel: var(--pc-radius-panel);
+    --ctl: var(--pc-ctl-h);
+    --font-sans: var(--pc-font);
+    --font-code: var(--pc-font-code);
+    --accent-soft: color-mix(in srgb, var(--pc-accent) 14%, transparent);
+    color-scheme: dark;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0; height: 100vh; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: var(--font-sans); font-size: 12px; -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .v { font-family: var(--font-code); font-variant-numeric: tabular-nums; }
+  .muted { color: var(--muted); }
+  .micro { font-size: 10px; line-height: 1.35; }
+  #app { position: relative; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+  #bar {
+    flex: 0 0 auto; display: flex; align-items: center; align-content: center; flex-wrap: wrap; gap: 8px;
+    min-height: 40px; padding: 2px 10px; border-bottom: 1px solid var(--line);
+  }
+  .totals { display: flex; align-items: baseline; gap: 10px; min-width: 0; white-space: nowrap; }
+  .stat { display: inline-flex; align-items: baseline; gap: 4px; }
+  .k { font-size: 9.5px; line-height: 1; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .stat b { font-weight: 600; font-size: 12px; }
+  .badge {
+    display: inline-flex; align-items: center; height: 18px; padding: 0 6px;
+    border: 1px solid var(--line-strong); border-radius: 999px;
+    color: var(--muted); font-size: 9.5px; letter-spacing: .03em; white-space: nowrap;
+  }
+  #status { font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .views { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); flex: none; }
+  .views button {
+    height: calc(var(--ctl) - 8px); min-height: 26px; padding: 0 9px; border: 1px solid transparent;
+    border-radius: 6px; background: transparent; color: var(--muted); font-size: 11.5px; white-space: nowrap;
+  }
+  .views button:hover { color: var(--text); }
+  .views button[aria-selected="true"] { background: var(--elev); border-color: var(--line-strong); color: var(--text); }
+  .sortbtn {
+    height: var(--ctl); padding: 0 9px; border: 1px solid var(--line-strong); border-radius: 8px;
+    background: var(--bg); color: var(--text); font-size: 11px; white-space: nowrap; flex: none;
+  }
+  .sortbtn:hover { background: var(--hover); }
+  .chip {
+    height: 26px; padding: 0 8px; border: 1px solid var(--line-strong); border-radius: 999px;
+    background: var(--accent-soft); color: var(--text); font-size: 11px; white-space: nowrap; max-width: 180px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .search {
+    flex: 1 1 130px; min-width: 90px; height: var(--ctl); display: flex; align-items: center; gap: 6px;
+    padding: 0 9px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg);
+  }
+  .search:focus-within { border-color: var(--accent); }
+  .search svg { width: 13px; height: 13px; color: var(--muted); flex: none; }
+  .search input { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font-size: 12px; }
+  .search input::placeholder { color: var(--muted); }
+  select {
+    height: var(--ctl); padding: 0 6px; border: 1px solid var(--line-strong); border-radius: 8px;
+    background: var(--bg); color: var(--text); font-size: 11px; flex: none;
+  }
+  .iconbtn {
+    width: var(--ctl); height: var(--ctl); display: inline-flex; align-items: center; justify-content: center;
+    border: 1px solid var(--line-strong); border-radius: 8px; background: var(--bg); color: var(--muted); flex: none;
+  }
+  .iconbtn:hover { background: var(--hover); color: var(--text); }
+  .iconbtn svg { width: 14px; height: 14px; }
+  #main { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; }
+  .banner {
+    display: flex; align-items: center; gap: 8px; margin: 8px 10px 0; padding: 6px 9px;
+    border: 1px solid var(--line); border-radius: 8px; background: var(--elev); color: var(--muted); font-size: 11px;
+  }
+  .banner .msg { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .list { padding: 0 6px 8px; }
+  .list-head {
+    display: grid; grid-template-columns: minmax(0,1fr) 62px 78px; gap: 8px; align-items: center;
+    padding: 2px 8px; color: var(--muted); font-size: 10px; letter-spacing: .07em; text-transform: uppercase;
+    position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line);
+  }
+  .list-head .num, .row-main .num { text-align: right; }
+  .proc { border-bottom: 1px solid var(--line); }
+  .proc:last-child { border-bottom: 0; }
+  .proc.sel .row-main { background: var(--accent-soft); border-radius: 6px; }
+  .row-main {
+    display: grid; grid-template-columns: minmax(0,1fr) 62px 78px; gap: 8px; align-items: center;
+    width: 100%; min-height: 27px; padding: 3px 8px; border: 1px solid transparent; border-radius: 6px;
+    background: transparent; text-align: left; color: var(--text);
+  }
+  .row-main:hover { background: var(--hover); }
+  .name { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+  .name .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
+  .name .sub { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9.5px; color: var(--muted); margin-top: 1px; }
+  .tag {
+    display: inline-block; margin-left: 5px; padding: 0 4px; border: 1px solid var(--line-strong);
+    border-radius: 4px; font-size: 9px; line-height: 13px; color: var(--muted); vertical-align: 1px;
+  }
+  .cpu { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .cpu b { font-family: var(--font-code); font-variant-numeric: tabular-nums; font-weight: 500; font-size: 11.5px; }
+  .meter { display: block; width: 100%; height: 2px; border-radius: 99px; background: var(--line-strong); overflow: hidden; }
+  .meter i { display: block; height: 100%; border-radius: 99px; background: var(--accent); transition: width var(--motion-fast, 120ms) var(--ease-out, ease-out); }
+  .mem { text-align: right; font-size: 11.5px; color: var(--text); }
+  .owner-col { display: none; min-width: 0; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .disk-col, .pid-col { display: none; text-align: right; font-family: var(--font-code); font-size: 11px; color: var(--muted); }
+  .row-detail {
+    display: grid; grid-template-columns: minmax(0,1fr) auto; gap: 10px; align-items: center;
+    padding: 7px 9px 9px 9px; background: var(--accent-soft);
+    border-radius: 0 0 6px 6px; margin: -1px 0 3px;
+  }
+  .detail-stats { min-width: 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .detail-stats .sparkwrap { flex: none; display: inline-flex; align-items: center; }
+  .spark { display: block; overflow: visible; }
+  .spark path { fill: none; stroke: var(--accent); stroke-width: 1.6; stroke-linejoin: round; stroke-linecap: round; }
+  .detail-line { font-size: 10.5px; color: var(--muted); line-height: 1.4; min-width: 0; }
+  .detail-line b { color: var(--text); font-weight: 600; }
+  .detail-actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+  .btn {
+    height: 28px; padding: 0 9px; border: 1px solid var(--line-strong); border-radius: 7px;
+    background: var(--bg); color: var(--text); font-size: 11px; white-space: nowrap;
+  }
+  .btn:hover { background: var(--hover); }
+  .btn.primary { background: var(--accent-fill); border-color: var(--accent-fill); color: var(--on-accent); }
+  .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 50%, var(--line-strong)); }
+  .btn:disabled { opacity: .55; cursor: default; }
+  .cmdline { grid-column: 1 / -1; margin: 2px 0 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); overflow-x: auto; }
+  .cmdline code { font-family: var(--font-code); font-size: 10.5px; color: var(--muted); white-space: pre-wrap; overflow-wrap: anywhere; }
+  .empty { max-width: 520px; padding: 16px; margin: 12px 10px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
+  .empty h3 { margin: 0 0 4px; font-size: 13px; font-weight: 600; }
+  .empty p { margin: 0 0 10px; color: var(--muted); font-size: 11.5px; line-height: 1.5; }
+  .more { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 8px; color: var(--muted); font-size: 10.5px; }
+  .group {
+    display: grid; grid-template-columns: minmax(0,1fr) 64px 78px; gap: 8px; align-items: center;
+    width: 100%; padding: 7px 8px; border: 1px solid transparent; border-bottom: 1px solid var(--line);
+    background: transparent; text-align: left; color: var(--text);
+  }
+  .group:hover { background: var(--hover); }
+  .group .gname { display: flex; flex-direction: column; min-width: 0; }
+  .group .gname b { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group .gsub { font-size: 9.5px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .group .gcpu { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+  .group .gcpu b { font-family: var(--font-code); font-size: 11.5px; font-weight: 500; }
+  .group .gmem { text-align: right; font-family: var(--font-code); font-size: 11.5px; }
+  .agents-note { padding: 7px 12px 2px; color: var(--muted); font-size: 10.5px; line-height: 1.45; }
+  .perf { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px 10px 0; }
+  .pcard { padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); }
+  .plabel { font-size: 9.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .pval { font-family: var(--font-code); font-variant-numeric: tabular-nums; font-size: 26px; font-weight: 600; letter-spacing: -.02em; line-height: 1.15; margin-top: 2px; }
+  .psub { font-size: 10px; color: var(--muted); margin-top: 1px; }
+  .pspark { display: block; width: 100%; height: 34px; margin-top: 6px; }
+  .pspark path { fill: none; stroke: var(--accent); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+  .pspark .base { stroke: var(--line); stroke-width: 1; }
+  .note { margin: 10px; padding: 9px 11px; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--panel); color: var(--muted); font-size: 11px; line-height: 1.5; }
+  .top2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+  .top2 h3 { margin: 0 0 4px; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .toprow {
+    display: grid; grid-template-columns: minmax(0,1fr) 64px; gap: 8px; align-items: center;
+    width: 100%; padding: 4px 6px; border: 0; border-radius: 6px; background: transparent; text-align: left; color: var(--text);
+  }
+  .toprow:hover { background: var(--hover); }
+  .toprow .tn { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; }
+  .toprow .tn span { color: var(--muted); font-size: 9.5px; display: block; overflow: hidden; text-overflow: ellipsis; }
+  .toprow .tv { text-align: right; font-family: var(--font-code); font-size: 11px; }
+  #flash {
+    position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%);
+    max-width: calc(100% - 24px); padding: 7px 11px; border: 1px solid var(--line-strong);
+    border-radius: 8px; background: var(--elev); font-size: 11.5px; line-height: 1.4; z-index: 5;
+  }
+  #flash[data-tone="danger"] { color: var(--danger); }
+  #flash[hidden] { display: none; }
+  @media (min-height: 380px) {
+    .list-head { padding: 5px 8px 4px; }
+  }
+  @media (max-width: 1100px) {
+    #refresh { display: none; }
+  }
+  @media (min-width: 900px) {
+    .list-head, .row-main { grid-template-columns: minmax(0,1fr) 150px 62px 78px; }
+    .owner-col { display: block; }
+    .name .owner-sub { display: none; }
+  }
+  @media (min-width: 1180px) {
+    .list-head, .row-main { grid-template-columns: minmax(0,1fr) 150px 62px 78px 74px 54px; }
+    .disk-col, .pid-col { display: block; }
+  }
+  @media (max-width: 720px) {
+    #bar { height: auto; flex-wrap: wrap; padding: 6px 8px; gap: 6px; }
+    .totals { order: 1; }
+    .views { order: 2; }
+    .search { order: 3; flex: 1 1 100%; }
+    .sortbtn, select, .iconbtn { order: 4; }
+    #status, .badge, .owner-col, .disk-col, .pid-col { display: none; }
+    .perf, .top2 { grid-template-columns: 1fr; }
+    .row-detail { grid-template-columns: 1fr; }
+    .detail-actions { justify-content: flex-start; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <div class="totals" id="totals" title="CPU is this machine's total. Memory is the operating system's figure for the side shown.">
+      <span class="stat"><span class="k">CPU</span><b class="v" id="t-cpu">—</b></span>
+      <span class="stat"><span class="k">Mem</span><b class="v" id="t-mem">—</b></span>
+      <span class="stat"><span class="k">Proc</span><b class="v" id="t-count">—</b></span>
+      <span class="badge" id="t-source" hidden></span>
+      <span id="status"></span>
+    </div>
+    <div class="views" role="tablist" aria-label="View">
+      <button type="button" role="tab" data-view="processes" aria-selected="true">Processes</button>
+      <button type="button" role="tab" data-view="agents" aria-selected="false">Agents</button>
+      <button type="button" role="tab" data-view="performance" aria-selected="false">Performance</button>
+    </div>
+    <button class="sortbtn" id="sort" type="button" title="Sort by CPU, highest first">CPU ↓</button>
+    <button class="chip" id="owner-chip" type="button" hidden></button>
+    <label class="search" title="Search processes">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="6.6" cy="6.6" r="4.3"/><path d="M10 10l3.4 3.4"/></svg>
+      <input id="q" type="search" placeholder="Search" aria-label="Search name, PID or owner" title="Search name, PID or owner" autocomplete="off" spellcheck="false">
+    </label>
+    <select id="speed" aria-label="Update speed">
+      <option value="1000">High · 1 s</option>
+      <option value="2000">Normal · 2 s</option>
+      <option value="5000">Low · 5 s</option>
+      <option value="paused">Paused</option>
+    </select>
+    <button class="iconbtn" id="refresh" type="button" title="Refresh now" aria-label="Refresh now">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><path d="M13.2 8a5.2 5.2 0 1 1-1.6-3.7"/><path d="M13.4 2.6v3.1h-3.1"/></svg>
+    </button>
+  </header>
+  <main id="main">
+    <div class="empty"><h3>Reading processes</h3><p>The first snapshot takes a moment.</p></div>
+  </main>
+  <div id="flash" role="status" aria-live="polite" hidden></div>
+</div>
+<script>
+(() => {
+  "use strict";
+  const state = {
+    api: null, confirm: null, stateDoor: null,
+    snap: null, error: "", busy: false, flashTimer: 0,
+    lens: "processes", sort: "cpu", dir: "desc", q: "", owner: "",
+    speed: "", savedSpeed: "", poll: 0, limit: 0,
+    selected: null, ending: "", cmdOpen: "", cmd: new Map(), cmdPending: "",
+    tall: false, source: "",
+  };
+  const $ = (id) => document.getElementById(id);
+  const main = $("main");
+  const search = $("q");
+  const sortBtn = $("sort");
+  const speedSel = $("speed");
+  const ownerChip = $("owner-chip");
+
+  const esc = (v) => String(v == null ? "" : v).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const isNum = (v) => v != null && Number.isFinite(Number(v));
+
+  function fmtBytes(n) {
+    const v = Number(n);
+    if (!Number.isFinite(v) || v <= 0) return "—";
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let x = v, i = 0;
+    while (x >= 1024 && i < units.length - 1) { x /= 1024; i++; }
+    const t = x >= 10 || Number.isInteger(x) ? String(Math.round(x)) : x.toFixed(1);
+    return t + " " + units[i];
+  }
+  function fmtMemPair(used, total) {
+    if (!isNum(used) || !isNum(total)) return "—";
+    const u = fmtBytes(used), t = fmtBytes(total);
+    const us = u.split(" "), ts = t.split(" ");
+    if (us[1] === ts[1]) return us[0] + " / " + ts[0] + " " + ts[1];
+    return u + " / " + t;
+  }
+  function fmtPct(v) {
+    if (!isNum(v)) return "—";
+    const n = Number(v);
+    return (n < 10 ? n.toFixed(1) : String(Math.round(n))) + "%";
+  }
+  function fmtAge(ms) {
+    const s = Math.max(0, Math.round(Number(ms) / 1000));
+    if (s < 60) return s + "s";
+    return Math.round(s / 60) + "m";
+  }
+  function ownerLabel(p) {
+    if (p.owner && (p.owner.agent || p.owner.workspace)) return p.owner.agent || p.owner.workspace;
+    return p.platform === "windows" ? "Windows app" : "Unattributed";
+  }
+  function ownerSub(p) {
+    if (p.owner) {
+      const a = p.owner.agent || "", w = p.owner.workspace || "";
+      if (a && w) return w;
+      return p.owner.confidence === "exact" ? "tmux pane" : p.owner.confidence === "likely" ? "folder match" : "owner";
+    }
+    return p.platform === "windows" ? "Windows host" : "no owner";
+  }
+  function spark(values, w, h, max) {
+    const nums = (values || []).filter(isNum).map(Number);
+    if (nums.length < 2) return '<span class="micro muted">Measuring</span>';
+    const top = Math.max(1, Number(max) || Math.max(...nums));
+    const step = w / (nums.length - 1);
+    let d = "";
+    nums.forEach((v, i) => {
+      const x = (i * step).toFixed(1);
+      const y = (h - 1 - Math.min(1, v / top) * (h - 2)).toFixed(1);
+      d += (i ? "L" : "M") + x + " " + y;
+    });
+    return '<svg class="spark" viewBox="0 0 ' + w + " " + h + '" width="' + w + '" height="' + h + '" aria-hidden="true"><path d="' + d + '"/></svg>';
+  }
+  function bigSpark(values, max, w, h) {
+    const nums = (values || []).filter(isNum).map(Number);
+    const base = '<path class="base" d="M0 ' + (h - 1) + "L" + w + " " + (h - 1) + '"/>';
+    if (nums.length < 2) return '<svg class="pspark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none" aria-hidden="true">' + base + "</svg>";
+    const top = Math.max(1, Number(max) || Math.max(...nums));
+    const step = w / (nums.length - 1);
+    let d = "";
+    nums.forEach((v, i) => {
+      const x = (i * step).toFixed(1);
+      const y = (h - 1 - Math.min(1, v / top) * (h - 3)).toFixed(1);
+      d += (i ? "L" : "M") + x + " " + y;
+    });
+    return '<svg class="pspark" viewBox="0 0 ' + w + " " + h + '" preserveAspectRatio="none" aria-hidden="true">' + base + '<path d="' + d + '"/></svg>';
+  }
+  function sortValue(p, key) {
+    if (key === "mem") return Number(p.memBytes) || 0;
+    if (key === "name") return String(p.name || "").toLowerCase();
+    if (key === "pid") return Number(p.pid) || 0;
+    return p.cpuPct == null ? null : Number(p.cpuPct);
+  }
+  function sortList(list) {
+    const dir = state.dir === "asc" ? 1 : -1;
+    return [...list].sort((a, b) => {
+      const av = sortValue(a, state.sort), bv = sortValue(b, state.sort);
+      if (av == null && bv != null) return 1;
+      if (av != null && bv == null) return -1;
+      if (av !== bv) return (av < bv ? -1 : 1) * dir;
+      const an = String(a.name || ""), bn = String(b.name || "");
+      if (an !== bn) return an.localeCompare(bn);
+      return (Number(a.pid) || 0) - (Number(b.pid) || 0);
+    });
+  }
+  function visibleProcesses() {
+    const snap = state.snap;
+    if (!snap) return [];
+    const q = state.q.trim().toLowerCase();
+    let list = (snap.processes || []).filter((p) => {
+      if (state.owner && ownerLabel(p) !== state.owner) return false;
+      if (!q) return true;
+      return [p.name, p.pid, ownerLabel(p), ownerSub(p), p.owner && p.owner.workspace]
+        .some((v) => v != null && String(v).toLowerCase().includes(q));
+    });
+    return sortList(list);
+  }
+  function sortLabel() {
+    if (state.sort === "cpu") return "CPU " + (state.dir === "desc" ? "↓" : "↑");
+    if (state.sort === "mem") return "Mem " + (state.dir === "desc" ? "↓" : "↑");
+    return "Name A–Z";
+  }
+  function nextSort() {
+    if (state.sort === "cpu" && state.dir === "desc") { state.dir = "asc"; }
+    else if (state.sort === "cpu") { state.sort = "mem"; state.dir = "desc"; }
+    else if (state.sort === "mem" && state.dir === "desc") { state.dir = "asc"; }
+    else if (state.sort === "mem") { state.sort = "name"; state.dir = "asc"; }
+    else { state.sort = "cpu"; state.dir = "desc"; }
+    sortBtn.textContent = sortLabel();
+    saveView();
+    render();
+  }
+  function saveView() {
+    if (!state.stateDoor) return;
+    clearTimeout(saveView.t);
+    saveView.t = setTimeout(() => {
+      state.stateDoor.set("view", { lens: state.lens, sort: state.sort, dir: state.dir, speed: state.speed || String(state.savedSpeed || "") }).catch(() => {});
+    }, 250);
+  }
+  function flash(msg, tone) {
+    const el = $("flash");
+    if (!msg) { el.hidden = true; return; }
+    el.textContent = msg;
+    el.dataset.tone = tone === "danger" ? "danger" : "";
+    el.hidden = false;
+    clearTimeout(state.flashTimer);
+    state.flashTimer = setTimeout(() => { el.hidden = true; }, 4500);
+  }
+  function banner() {
+    if (!state.error || !state.snap) return "";
+    return '<div class="banner"><span class="msg">Last reading ' + esc(fmtAge(Date.now() - (state.snap.sampledAt || Date.now()))) + " ago. " + esc(state.error) + '</span><button class="btn" type="button" data-act="retry">Try again</button></div>';
+  }
+  function sourceText(snap) {
+    if (!snap) return "";
+    if (snap.platform === "darwin") return "macOS";
+    if (snap.platform === "win32") return snap.windows.available ? "Windows" : "Windows · partial";
+    if (snap.windows.applicable !== false) {
+      if (snap.windows.available) return "Windows + WSL";
+      if (!snap.settings.show_windows) return "Linux · Windows off";
+      return "WSL · Windows hidden";
+    }
+    return "Linux";
+  }
+  function sourceTitle(snap) {
+    if (!snap) return "";
+    if (snap.platform === "darwin") return "This computer runs the process on macOS.";
+    if (snap.windows.applicable === false) return "This computer runs Linux; there is no Windows host to read.";
+    if (snap.windows.available) return "COGNIX[WS] reads this Linux environment and the Windows host through interop.";
+    return snap.windows.reason || "Windows apps are not visible in this environment.";
+  }
+  function updateHeader(snap) {
+    $("t-cpu").textContent = fmtPct(snap.totals && snap.totals.cpuPct);
+    $("t-mem").textContent = fmtMemPair(snap.host && snap.host.memUsed, snap.host && snap.host.memTotal);
+    $("t-count").textContent = String((snap.totals && snap.totals.count) || 0);
+    const badge = $("t-source");
+    const text = sourceText(snap);
+    badge.hidden = !text;
+    badge.textContent = text;
+    badge.title = sourceTitle(snap);
+    const known = snap.totals && snap.totals.cpuKnown;
+    $("status").textContent = state.error ? "stale" : !known ? "measuring" : "";
+    if (state.owner) {
+      ownerChip.hidden = false;
+      ownerChip.textContent = "Owner: " + state.owner + "  ×";
+      ownerChip.title = "Clear the owner filter";
+    } else {
+      ownerChip.hidden = true;
+    }
+    const tabs = document.querySelectorAll("[data-view]");
+    tabs.forEach((b) => b.setAttribute("aria-selected", b.dataset.view === state.lens ? "true" : "false"));
+    sortBtn.textContent = sortLabel();
+    if (document.activeElement !== speedSel && state.speed) speedSel.value = state.speed;
+  }
+  function procRow(p) {
+    const key = esc(p.key || (p.platform + ":" + p.pid + ":" + p.startKey));
+    const selected = state.selected === key;
+    const cpu = fmtPct(p.cpuPct);
+    const pct = isNum(p.cpuPct) ? Math.max(0, Math.min(100, Number(p.cpuPct))) : 0;
+    const tag = p.platform === "windows" ? '<span class="tag">Windows</span>' : "";
+    const owner = ownerLabel(p);
+    const sub = ownerSub(p);
+    const detail = selected ? procDetail(p) : "";
+    return '<div class="proc' + (selected ? " sel" : "") + '">' +
+      '<button class="row-main" type="button" data-key="' + key + '" aria-expanded="' + (selected ? "true" : "false") + '" title="' + esc(p.name + " · PID " + p.pid) + '">' +
+        '<span class="name"><span class="nm">' + esc(p.name) + tag + '</span><span class="sub owner-sub">' + esc(owner) + '</span></span>' +
+        '<span class="owner-col">' + esc(owner) + '</span>' +
+        '<span class="cpu"><b>' + cpu + '</b><span class="meter"><i style="width:' + pct + '%"></i></span></span>' +
+        '<span class="mem v">' + fmtBytes(p.memBytes) + '</span>' +
+        '<span class="disk-col">' + (p.diskBps == null ? "—" : fmtBytes(p.diskBps) + "/s") + '</span>' +
+        '<span class="pid-col">' + esc(p.pid) + '</span>' +
+      '</button>' + detail + '</div>';
+  }
+  function procDetail(p) {
+    const key = p.key || (p.platform + ":" + p.pid + ":" + p.startKey);
+    const canEnd = !p.protected && p.sameUser !== false && !p.denied && (p.platform !== "windows" || !!p.startKey);
+    const ending = state.ending === key;
+    const cmdOpen = state.cmdOpen === key;
+    const cmd = state.cmd.get(key);
+    const reason = p.protected ? "Not ended: COGNIX[WS] or a system process."
+      : p.denied || p.sameUser === false ? "Not ended: another user's process or protected."
+      : p.platform === "windows" && !p.startKey ? "Not ended: no start token to verify."
+      : "";
+    const actions = [];
+    if (canEnd) actions.push('<button class="btn danger" type="button" data-act="end" data-key="' + esc(key) + '"' + (ending ? " disabled" : "") + ">" + (ending ? "Ending…" : "End task") + "</button>");
+    if (p.platform === "linux") actions.push('<button class="btn" type="button" data-act="cmd" data-key="' + esc(key) + '">' + (cmdOpen ? "Hide command line" : "Command line") + "</button>");
+    const info = '<span class="detail-line"><b>' + esc(p.name) + "</b> · PID " + esc(p.pid) + " · " + (p.threads || 0) + " threads · " + (p.platform === "windows" ? "Windows app" : "Linux process") + (p.owner && p.owner.confidence ? " · " + esc(p.owner.confidence) : "") + "</span>" + (reason ? '<span class="detail-line">' + esc(reason) + "</span>" : "");
+    let cmdBlock = "";
+    if (cmdOpen) {
+      if (state.cmdPending === key) cmdBlock = '<div class="cmdline"><code>Reading…</code></div>';
+      else if (cmd && cmd.error) cmdBlock = '<div class="cmdline"><code>' + esc(cmd.error) + "</code></div>";
+      else if (cmd && cmd.text) cmdBlock = '<div class="cmdline"><code>' + esc(cmd.text) + "</code></div>";
+    }
+    return '<div class="row-detail" data-detail="' + esc(key) + '">' +
+      '<div class="detail-stats"><span class="sparkwrap">' + spark(p.spark, 72, 18) + "</span>" + info + "</div>" +
+      '<div class="detail-actions">' + actions.join("") + "</div>" + cmdBlock + "</div>";
+  }
+  function emptyState(title, text, action, label) {
+    return '<div class="empty"><h3>' + esc(title) + "</h3><p>" + esc(text) + "</p>" +
+      (action ? '<button class="btn primary" type="button" data-act="' + esc(action) + '">' + esc(label) + "</button>" : "") + "</div>";
+  }
+  function renderProcesses(snap) {
+    const list = visibleProcesses();
+    if (!list.length) {
+      if (state.q.trim()) return banner() + emptyState("Nothing matches “" + state.q.trim() + "”", "No running process has that name, PID or owner.", "clear", "Clear search");
+      return banner() + emptyState("No processes to show", "The snapshot is empty. Refresh to read this machine again.", "retry", "Refresh");
+    }
+    const limit = state.limit || (window.innerHeight >= 380 ? 140 : 60);
+    const shown = list.slice(0, limit);
+    const head = '<div class="list-head" aria-hidden="true"><span>Name</span><span class="owner-col">Owner</span><span class="num">CPU</span><span class="num">Memory</span><span class="disk-col num">Disk</span><span class="pid-col num">PID</span></div>';
+    const more = list.length > shown.length
+      ? '<div class="more"><span>Showing ' + shown.length + " of " + list.length + ".</span>" + (state.q || state.owner ? '<span class="muted">Narrow the search to see fewer.</span>' : '<button class="btn" type="button" data-act="more">Show more</button>') + "</div>"
+      : "";
+    main.innerHTML = banner() + '<div class="list">' + head + shown.map(procRow).join("") + more + "</div>";
+  }
+  function renderAgents(snap) {
+    const groups = [...(snap.agents || [])].sort((a, b) => (a.key === "other" ? 1 : 0) - (b.key === "other" ? 1 : 0) || (Number(b.cpuPct) || 0) - (Number(a.cpuPct) || 0));
+    if (!groups.length) return banner() + emptyState("No owners yet", "COGNIX[WS] could not say which agent owns these processes. The process list still works.", "view-processes", "Show processes");
+    const onlyOther = groups.every((g) => g.key === "other" || g.name === "Other");
+    const note = onlyOther
+      ? '<div class="agents-note">No agent or workspace owns these yet. Processes still run; the list is complete, the owner is not known.</div>'
+      : '<div class="agents-note">CPU and memory are the sum of each owner’s processes. “Exact” comes from a tmux pane COGNIX[WS] started; “likely” from the process folder.</div>';
+    const rows = groups.map((g) => {
+      const name = g.key === "other" || g.name === "Other" ? "Unattributed" : g.name;
+      const sub = [g.count + (g.count === 1 ? " process" : " processes"), g.confidence, g.top ? "top " + g.top.name + " " + fmtPct(g.top.cpuPct) : ""].filter(Boolean).join(" · ");
+      const clickable = !(g.key === "other" || g.name === "Other");
+      return '<button class="group" type="button"' + (clickable ? ' data-owner="' + esc(g.name) + '"' : ' disabled style="cursor:default"') + ">" +
+        '<span class="gname"><b>' + esc(name) + '</b><span class="gsub">' + esc(g.workspace && g.workspace !== name ? g.workspace + " · " : "") + esc(sub) + "</span></span>" +
+        '<span class="gcpu"><b>' + fmtPct(g.cpuPct) + '</b><span class="meter"><i style="width:' + Math.max(0, Math.min(100, Number(g.cpuPct) || 0)) + '%"></i></span></span>' +
+        '<span class="gmem">' + fmtBytes(g.memBytes) + "</span></button>";
+    }).join("");
+    main.innerHTML = banner() + note + '<div class="list" style="padding-top:6px">' + rows + "</div>";
+  }
+  function topRows(list, key) {
+    const val = key === "mem" ? (p) => Number(p.memBytes) || 0 : (p) => (p.cpuPct == null ? -1 : Number(p.cpuPct));
+    const rows = [...list].sort((a, b) => val(b) - val(a) || String(a.name || "").localeCompare(String(b.name || ""))).slice(0, 5);
+    if (!rows.length) return '<p class="muted micro">Nothing to show.</p>';
+    return rows.map((p) => {
+      const keyv = esc(p.key || (p.platform + ":" + p.pid + ":" + p.startKey));
+      return '<button class="toprow" type="button" data-goto="' + keyv + '"><span class="tn">' + esc(p.name) + "<span>" + esc(ownerLabel(p)) + '</span></span><span class="tv">' + (key === "mem" ? fmtBytes(p.memBytes) : fmtPct(p.cpuPct)) + "</span></button>";
+    }).join("");
+  }
+  function renderPerformance(snap) {
+    const host = snap.host || {};
+    const cpuHist = snap.history && snap.history.cpu ? snap.history.cpu : [];
+    const memHist = snap.history && snap.history.mem ? snap.history.mem : [];
+    const span = snap.history && snap.history.spanMs ? fmtAge(snap.history.spanMs) : "this session";
+    const memSource = host.source === "windows" ? "Windows host" : host.source === "darwin" ? "macOS" : "Linux environment";
+    const note = snap.windows.applicable !== false && !snap.windows.available
+      ? '<p class="note">Windows apps are not visible: ' + esc(snap.windows.reason || "the helper is not available in this environment.") + "</p>"
+      : "";
+    const listAll = snap.processes || [];
+    main.innerHTML = banner() +
+      '<div class="perf">' +
+        '<article class="pcard"><div class="plabel">CPU · machine total</div><div class="pval">' + fmtPct(snap.totals && snap.totals.cpuPct) + '</div><div class="psub">' + esc(sourceText(snap)) + " · " + esc(host.cpus || "—") + " cores</div>" + bigSpark(cpuHist, 100, 200, 34) + '<div class="psub">Last ' + esc(span) + "</div></article>" +
+        '<article class="pcard"><div class="plabel">Memory · ' + esc(memSource) + '</div><div class="pval">' + fmtMemPair(host.memUsed, host.memTotal) + '</div><div class="psub">' + fmtPct(host.memTotal ? (host.memUsed / host.memTotal) * 100 : null) + " used</div>" + bigSpark(memHist, host.memTotal || 1, 200, 34) + '<div class="psub">Last ' + esc(span) + "</div></article>" +
+      "</div>" + note +
+      '<div class="top2"><section><h3>Top CPU</h3>' + topRows(listAll, "cpu") + "</section><section><h3>Top memory</h3>" + topRows(listAll, "mem") + "</section></div>";
+  }
+  function render() {
+    const snap = state.snap;
+    if (!snap) {
+      if (state.error) {
+        main.innerHTML = emptyState("Could not read this machine", state.error, "retry", "Try again");
+      } else {
+        main.innerHTML = '<div class="empty"><h3>Reading processes</h3><p>The first snapshot takes a moment.</p></div>';
+      }
+      return;
+    }
+    updateHeader(snap);
+    if (state.lens === "agents") renderAgents(snap);
+    else if (state.lens === "performance") renderPerformance(snap);
+    else renderProcesses(snap);
+  }
+  async function load(force) {
+    if (!state.api || state.busy) return;
+    state.busy = true;
+    try {
+      const r = await state.api.request(force ? "/refresh" : "/snapshot", { method: force ? "POST" : "GET" });
+      if (r.status !== 200) {
+        let msg = "The process answered " + r.status + ".";
+        try { const e = JSON.parse(r.body); if (e && e.error) msg = e.error; } catch { /* text */ }
+        throw new Error(msg);
+      }
+      const snap = JSON.parse(r.body);
+      state.snap = snap;
+      state.error = "";
+      if (!state.speed && snap.settings) state.speed = String(snap.settings.update_ms || 2000);
+      if (state.selected && !snap.processes.some((p) => (p.key || p.platform + ":" + p.pid + ":" + p.startKey) === state.selected)) state.selected = null;
+      render();
+      schedule();
+    } catch (e) {
+      state.error = e && e.message ? e.message : "The process did not answer.";
+      render();
+    } finally {
+      state.busy = false;
+    }
+  }
+  function intervalMs() {
+    if (state.speed === "paused" || state.speed === "0") return 0;
+    const n = Number(state.speed);
+    return Number.isFinite(n) && n > 0 ? Math.max(1000, Math.min(10000, n)) : 2000;
+  }
+  function schedule() {
+    clearInterval(state.poll);
+    const ms = intervalMs();
+    if (!ms) return;
+    state.poll = setInterval(() => { if (!document.hidden) load(false); }, ms);
+  }
+  async function setSpeed(value) {
+    state.speed = value;
+    saveView();
+    try {
+      if (!state.api) return;
+      if (value === "paused") {
+        await state.api.request("/pause", { method: "POST", body: JSON.stringify({ paused: true }), contentType: "application/json" });
+        clearInterval(state.poll);
+        flash("Paused. The reading stays as it was.");
+      } else {
+        await state.api.request("/pause", { method: "POST", body: JSON.stringify({ paused: false }), contentType: "application/json" });
+        await state.api.request("/speed", { method: "POST", body: JSON.stringify({ ms: Number(value) }), contentType: "application/json" });
+        load(true);
+      }
+    } catch (e) {
+      flash(e.message || "Could not change the speed.", "danger");
+    }
+  }
+  async function endTask(key) {
+    const p = (state.snap && state.snap.processes || []).find((x) => (x.key || x.platform + ":" + x.pid + ":" + x.startKey) === key);
+    if (!p || !state.api) return;
+    if (!state.confirm) { flash("The host cannot ask for confirmation here.", "danger"); return; }
+    state.ending = key;
+    render();
+    try {
+      const r = await state.api.request("/operations", { method: "POST", contentType: "application/json", body: JSON.stringify({ action: "end", platform: p.platform, pid: p.pid, startKey: p.startKey }) });
+      let out = null;
+      try { out = JSON.parse(r.body); } catch { /* answer */ }
+      if (r.status !== 201 || !out || !out.operation) throw new Error((out && out.error) || "The process refused to prepare the operation.");
+      const answer = await state.confirm.operation(out.operation.id);
+      if (!answer || !answer.confirmed) { state.ending = ""; render(); return; }
+      const op = answer.operation || {};
+      if (op.status === "done") flash("Ended " + p.name + ".");
+      else flash(op.error || "The process was not ended.", "danger");
+      state.selected = key;
+      state.ending = "";
+      await load(true);
+    } catch (e) {
+      state.ending = "";
+      render();
+      flash(e.message || "The process was not ended.", "danger");
+    }
+  }
+  async function commandLine(key) {
+    if (state.cmdOpen === key) { state.cmdOpen = ""; render(); return; }
+    state.cmdOpen = key;
+    if (state.cmd.has(key)) { render(); return; }
+    const p = (state.snap && state.snap.processes || []).find((x) => (x.key || x.platform + ":" + x.pid + ":" + x.startKey) === key);
+    if (!p || !state.api) { render(); return; }
+    state.cmdPending = key;
+    render();
+    try {
+      const r = await state.api.request("/process/" + p.pid + "/cmdline");
+      let out = {};
+      try { out = JSON.parse(r.body); } catch { /* text */ }
+      if (r.status !== 200) state.cmd.set(key, { error: out.error || "The command line is not available." });
+      else state.cmd.set(key, { text: out.cmdline || "" });
+    } catch (e) {
+      state.cmd.set(key, { error: e.message || "The command line is not available." });
+    } finally {
+      state.cmdPending = "";
+      render();
+    }
+  }
+  async function selectKey(key, toggle) {
+    if (!key) return;
+    if (state.selected === key && toggle) state.selected = null;
+    else state.selected = key;
+    render();
+    const el = main.querySelector('[data-key="' + String(key).replace(/"/g, '\\"') + '"]');
+    if (el) { el.scrollIntoView({ block: "nearest" }); if (toggle) el.focus({ preventScroll: true }); }
+  }
+  function setLens(lens) {
+    if (!["processes", "agents", "performance"].includes(lens)) lens = "processes";
+    state.lens = lens;
+    state.limit = 0;
+    saveView();
+    render();
+  }
+  function setOwner(owner) {
+    state.owner = owner;
+    state.lens = "processes";
+    state.limit = 0;
+    render();
+  }
+  function bind() {
+    document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => setLens(b.dataset.view)));
+    sortBtn.addEventListener("click", nextSort);
+    ownerChip.addEventListener("click", () => { state.owner = ""; render(); });
+    search.addEventListener("input", (e) => { state.q = e.target.value; state.limit = 0; render(); });
+    speedSel.addEventListener("change", (e) => setSpeed(e.target.value));
+    $("refresh").addEventListener("click", () => { state.error = ""; load(true); });
+    main.addEventListener("click", (e) => {
+      const action = e.target.closest("[data-act]");
+      if (action) {
+        const act = action.dataset.act;
+        if (act === "retry") { state.error = ""; load(true); }
+        else if (act === "clear") { state.q = ""; search.value = ""; state.limit = 0; render(); }
+        else if (act === "more") { state.limit = (state.limit || (window.innerHeight >= 380 ? 140 : 60)) + 100; render(); }
+        else if (act === "end") endTask(action.dataset.key);
+        else if (act === "cmd") commandLine(action.dataset.key);
+        else if (act === "view-processes") setLens("processes");
+        return;
+      }
+      const group = e.target.closest("[data-owner]");
+      if (group) { setOwner(group.dataset.owner); return; }
+      const goto = e.target.closest("[data-goto]");
+      if (goto) { state.lens = "processes"; state.selected = goto.dataset.goto; render(); return; }
+      const row = e.target.closest("[data-key]");
+      if (row) { selectKey(row.dataset.key, true); }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "/" && document.activeElement !== search && !(e.target instanceof HTMLInputElement)) {
+        e.preventDefault(); search.focus(); return;
+      }
+      if (e.key === "Escape") {
+        if (state.q) { state.q = ""; search.value = ""; render(); }
+        else if (state.owner) { state.owner = ""; render(); }
+        else if (state.selected) { state.selected = null; render(); }
+        else search.blur();
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const rows = [...main.querySelectorAll("[data-key]")];
+        if (!rows.length) return;
+        const current = rows.indexOf(document.activeElement);
+        const next = e.key === "ArrowDown" ? Math.min(rows.length - 1, current + 1) : Math.max(0, current - 1);
+        if (rows[next]) {
+          e.preventDefault();
+          const key = rows[next].dataset.key;
+          state.selected = key;
+          render();
+          const again = [...main.querySelectorAll("[data-key]")].find((r) => r.dataset.key === key);
+          if (again) again.focus({ preventScroll: false });
+        }
+      }
+    });
+    window.addEventListener("resize", () => {
+      clearTimeout(bind.rt);
+      bind.rt = setTimeout(() => {
+        if (state.limit) state.limit = 0;
+        render();
+      }, 150);
+    });
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) load(false); });
+  }
+  async function boot() {
+    if (typeof picode === "undefined" || !picode.use) {
+      main.innerHTML = emptyState("The host bridge is not available", "This page only works inside COGNIX[WS]. Open it again from the Processes tab.", "retry", "Try again");
+      return;
+    }
+    try { state.api = await picode.use("process"); } catch (e) { state.api = null; }
+    try { state.confirm = await picode.use("confirm"); } catch { state.confirm = null; }
+    try { state.stateDoor = await picode.use("state"); } catch { state.stateDoor = null; }
+    if (state.stateDoor) {
+      try {
+        const saved = await state.stateDoor.get("view");
+        const v = saved && saved.value;
+        if (v && typeof v === "object") {
+          if (["processes", "agents", "performance"].includes(v.lens)) state.lens = v.lens;
+          if (["cpu", "mem", "name"].includes(v.sort)) state.sort = v.sort;
+          if (["asc", "desc"].includes(v.dir)) state.dir = v.dir;
+          if (["1000", "2000", "5000", "paused"].includes(String(v.speed))) state.speed = String(v.speed);
+        }
+      } catch { /* first run */ }
+    }
+    bind();
+    if (state.speed) speedSel.value = state.speed;
+    if (!state.api) {
+      main.innerHTML = emptyState("The host bridge is not available", "This page only works inside COGNIX[WS]. Open it again from the Processes tab.", "retry", "Try again");
+      return;
+    }
+    render();
+    await load(false);
+    if (state.speed === "paused") {
+      try { await state.api.request("/pause", { method: "POST", body: JSON.stringify({ paused: true }), contentType: "application/json" }); } catch { /* stays paused */ }
+    } else if (state.speed) {
+      try { await state.api.request("/speed", { method: "POST", body: JSON.stringify({ ms: Number(state.speed) }), contentType: "application/json" }); } catch { /* the setting default stays */ }
+    }
+    schedule();
+  }
+  boot().catch((e) => {
+    main.innerHTML = emptyState("The page could not start", e && e.message ? e.message : "Reload the Processes tab.", "retry", "Try again");
+  });
+})();
+</script>
+</body>
+</html>

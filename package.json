@@ -1,0 +1,15 @@
+{
+  "name": "picode-taskboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Processes on this machine in the COGNIX[WS] bottom dock",
+  "type": "module",
+  "scripts": {
+    "start": "node process.mjs",
+    "test": "node --test",
+    "helper": "cd helper && GOOS=windows GOARCH=amd64 CGO_ENABLED=0 go build -trimpath -ldflags=-s -w -o ../bin/picode-proc-windows-amd64.exe . && cd .. && chmod +x bin/picode-proc-windows-amd64.exe"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

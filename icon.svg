@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Taskboard">
+  <rect width="64" height="64" rx="14" fill="#2563EB"/>
+  <rect x="14" y="17" width="27" height="6" rx="3" fill="#fff"/>
+  <rect x="14" y="29" width="36" height="6" rx="3" fill="#fff" opacity=".82"/>
+  <rect x="14" y="41" width="19" height="6" rx="3" fill="#fff" opacity=".64"/>
+  <circle cx="48.5" cy="20" r="3.5" fill="#fff" opacity=".92"/>
+</svg>
