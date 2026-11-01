@@ -104,6 +104,7 @@ test("totals and groupByOwner", () => {
   assert.equal(t.cpuPct, 17);
   assert.equal(t.memBytes, 350);
   assert.equal(t.count, 3);
+  assert.equal(totals([{ cpuPct: null, memBytes: 1 }], 8, 1000).cpuPct, null);
   const groups = groupByOwner(list, { 1: { agent: "Claude Code", workspace: "picode", confidence: "exact" }, 2: { agent: "Claude Code", workspace: "picode", confidence: "exact" } });
   assert.equal(groups[0].name, "Claude Code");
   assert.equal(groups[0].count, 2);

@@ -193,7 +193,7 @@ export function totals(list, cpus, memTotal, machineCpuPct = null) {
     mem += Number(p.memBytes) || 0;
   }
   return {
-    cpuPct: machineCpuPct != null ? machineCpuPct : (list || []).length ? Math.round(Math.min(100, cpu) * 10) / 10 : null,
+    cpuPct: machineCpuPct != null ? machineCpuPct : known ? Math.round(Math.min(100, cpu) * 10) / 10 : null,
     memBytes: mem,
     memTotal: Number(memTotal) || 0,
     count: (list || []).length,

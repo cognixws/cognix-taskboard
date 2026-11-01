@@ -1,18 +1,27 @@
 {
   "id": "taskboard",
   "name": "Taskboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "apiVersion": 10,
   "publisher": "COGNIX[WS]",
   "description": "Processes on this machine in the bottom dock, with the agent or workspace that owns each one.",
   "icon": "icon.svg",
-  "permissions": ["agents:read", "workspaces:read", "inbox:write", "events:publish"],
+  "permissions": [
+    "agents:read",
+    "workspaces:read",
+    "inbox:write",
+    "events:publish"
+  ],
   "settings": [
     {
       "key": "update_ms",
       "label": "Update speed",
       "type": "select",
-      "options": ["1000", "2000", "5000"],
+      "options": [
+        "1000",
+        "2000",
+        "5000"
+      ],
       "default": "2000",
       "description": "How often the page asks for a new snapshot. It pauses by itself when the dock is hidden."
     },
@@ -33,12 +42,26 @@
   ],
   "process": {
     "command": "node",
-    "args": ["${extensionDir}/process.mjs"]
+    "args": [
+      "${extensionDir}/process.mjs"
+    ]
   },
   "ui": {
-    "pages": [{ "id": "tasks", "title": "Processes", "path": "ui/processes.html" }]
+    "pages": [
+      {
+        "id": "tasks",
+        "title": "Processes",
+        "path": "ui/processes.html"
+      }
+    ]
   },
   "contributes": {
-    "dockPanels": [{ "id": "tasks", "title": "Processes", "page": "tasks" }]
+    "dockPanels": [
+      {
+        "id": "tasks",
+        "title": "Processes",
+        "page": "tasks"
+      }
+    ]
   }
 }

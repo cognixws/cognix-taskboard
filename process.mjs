@@ -16,6 +16,7 @@ const execFileP = promisify(execFile);
 const PORT = Number(process.env.PICODE_EXT_PORT || 8799);
 const EXT_DIR = process.env.PICODE_EXT_DIR || process.cwd();
 const DATA = process.env.PICODE_EXT_DATA || path.join(os.tmpdir(), "taskboard-data");
+const PICODE_DATA = path.resolve(DATA, "../../..");
 const SECRET = process.env.PICODE_EXT_PROXY_SECRET || "";
 const HOST = process.env.PICODE_URL || "";
 const TOKEN = process.env.PICODE_EXT_TOKEN || "";
@@ -178,33 +179,54 @@ function workspaceForPath(cwd) {
   return best;
 }
 
+const normSlug = (value) => String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+
+function matchAgent(session, cwd) {
+  const raw = (/^picode-(?:sh-|as-)?(.+)$/.exec(session) || [])[1] || "";
+  if (!raw) return null;
+  const slug = raw.replace(/-[0-9a-f]{6,}$/i, "");
+  const normRaw = normSlug(raw);
+  const normSlugValue = normSlug(slug);
+  let candidates = state.agents.filter((a) => {
+    const id = normSlug(a.id), name = normSlug(a.name);
+    return id === normRaw || id.startsWith(normSlugValue) || normSlugValue.startsWith(id) || name === normSlugValue || normSlugValue.startsWith(name) || name.startsWith(normSlugValue);
+  });
+  if (!candidates.length) return null;
+  if (candidates.length === 1) return { agent: candidates[0], confidence: normSlug(candidates[0].id) === normRaw || normSlug(candidates[0].id) === normSlugValue ? "exact" : "likely" };
+  const ws = workspaceForPath(cwd);
+  if (!ws) return null;
+  candidates = candidates.filter((a) => a.workspaceId === ws.id);
+  return candidates.length === 1 ? { agent: candidates[0], confidence: "likely" } : null;
+}
+
 async function refreshTmux() {
   state.tmux = [];
-  const dataDir = state.identity && state.identity.dataDir;
-  if (!dataDir) return;
-  const socket = path.join(dataDir, "tmux.sock");
-  if (!fs.existsSync(socket)) return;
-  try {
-    const { stdout } = await execFileP("tmux", ["-S", socket, "list-panes", "-a", "-F", "#{session_name}\t#{pane_pid}\t#{pane_current_path}\t#{pane_current_command}"], { timeout: 2500, maxBuffer: 1 << 20 });
-    for (const line of String(stdout || "").split("\n")) {
-      const [session, pid, cwd, command] = line.split("\t");
-      if (!session || !/^\d+$/.test(String(pid || ""))) continue;
-      const m = /^picode-(?:sh-|as-)?(.+)$/.exec(session);
-      const id = m ? m[1] : "";
-      const agent = state.agents.find((a) => a.id === id) || null;
-      const ws = (agent && workspaceById(agent.workspaceId)) || workspaceForPath(cwd);
-      if (!agent && !ws) continue;
-      state.tmux.push({
-        session, pid: Number(pid), cwd: cwd || "", command: command || "",
-        owner: {
-          agent: agent ? agent.name : "",
-          workspace: ws ? ws.name : "",
-          workspaceId: ws ? ws.id : "",
-          confidence: agent ? "exact" : "exact",
-        },
-      });
-    }
-  } catch { /* tmux is optional */ }
+  const sockets = [
+    path.join(PICODE_DATA, "tmux.sock"),
+    path.join(process.env.HOME || "", ".picode", "tmux.sock"),
+  ].filter((v, i, all) => v && all.indexOf(v) === i && fs.existsSync(v));
+  for (const socket of sockets) {
+    try {
+      const { stdout } = await execFileP("tmux", ["-S", socket, "list-panes", "-a", "-F", "#{session_name}\t#{pane_pid}\t#{pane_current_path}\t#{pane_current_command}"], { timeout: 2500, maxBuffer: 1 << 20 });
+      for (const line of String(stdout || "").split("\n")) {
+        const [session, pid, cwd, command] = line.split("\t");
+        if (!session || !/^\d+$/.test(String(pid || ""))) continue;
+        const matched = matchAgent(session, cwd);
+        const ws = (matched && matched.agent && workspaceById(matched.agent.workspaceId)) || workspaceForPath(cwd);
+        if (!matched && !ws) continue;
+        state.tmux.push({
+          session, pid: Number(pid), cwd: cwd || "", command: command || "",
+          owner: {
+            agent: matched && matched.agent ? matched.agent.name : "",
+            workspace: ws ? ws.name : "",
+            workspaceId: ws ? ws.id : "",
+            confidence: matched ? matched.confidence : "likely",
+          },
+        });
+      }
+      if (state.tmux.length) return;
+    } catch { /* try the next socket */ }
+  }
 }
 
 function ancestorPids() {
@@ -475,8 +497,11 @@ async function collect() {
     machineCpu = win.machine;
   }
   if (machineCpu == null) {
-    const sum = merged.reduce((a, p) => a + (p.cpuPct == null ? 0 : p.cpuPct), 0);
-    machineCpu = Math.round(Math.min(100, sum) * 10) / 10;
+    const known = merged.some((p) => p.cpuPct != null);
+    if (known) {
+      const sum = merged.reduce((a, p) => a + (p.cpuPct == null ? 0 : p.cpuPct), 0);
+      machineCpu = Math.round(Math.min(100, sum) * 10) / 10;
+    }
   }
   const sum = totals(merged, host.cpus, host.memTotal, machineCpu);
   sum.processMem = merged.reduce((a, p) => a + (Number(p.memBytes) || 0), 0);
@@ -773,6 +798,8 @@ process.on("SIGINT", () => { try { server.close(); } catch { /* closing */ } pro
 if (TEST) {
   await loadIdentity();
   await loadSettings();
+  await loadAgents();
+  await refreshTmux();
   await sampleNow();
   server.listen(PORT, "127.0.0.1", () => log("taskboard test listening on 127.0.0.1:" + PORT));
 } else {
