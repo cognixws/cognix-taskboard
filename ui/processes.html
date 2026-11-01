@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta name="taskboard-version" content="0.1.1">
+<meta name="taskboard-version" content="0.1.2">
 <title>Processes</title>
 <link rel="stylesheet" href="../__picode/tokens.css">
 <style>
@@ -315,7 +315,7 @@
     if (p.owner) {
       const a = p.owner.agent || "", w = p.owner.workspace || "";
       if (a && w) return w;
-      return p.owner.confidence === "exact" ? "tmux pane" : p.owner.confidence === "likely" ? "folder match" : "owner";
+      return p.owner.confidence === "exact" ? "terminal id" : p.owner.confidence === "likely" ? "name or folder" : "owner";
     }
     return p.platform === "windows" ? "Windows host" : "no owner";
   }
@@ -519,7 +519,7 @@
     const onlyOther = groups.every((g) => g.key === "other" || g.name === "Other");
     const note = onlyOther
       ? '<div class="agents-note">No agent or workspace owns these yet. Processes still run; the list is complete, the owner is not known.</div>'
-      : '<div class="agents-note">CPU and memory are the sum of each owner’s processes. “Exact” comes from a tmux pane COGNIX[WS] started; “likely” from the process folder.</div>';
+      : '<div class="agents-note">CPU and memory are the sum of each owner’s processes. “Likely” comes from a COGNIX[WS] terminal name or the process folder; this version does not claim “exact”.</div>';
     const rows = groups.map((g) => {
       const name = g.key === "other" || g.name === "Other" ? "Unattributed" : g.name;
       const sub = [g.count + (g.count === 1 ? " process" : " processes"), g.confidence, g.top ? "top " + g.top.name + " " + fmtPct(g.top.cpuPct) : ""].filter(Boolean).join(" · ");

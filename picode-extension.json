@@ -1,7 +1,7 @@
 {
   "id": "taskboard",
   "name": "Taskboard",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "apiVersion": 10,
   "publisher": "COGNIX[WS]",
   "description": "Processes on this machine in the bottom dock, with the agent or workspace that owns each one.",

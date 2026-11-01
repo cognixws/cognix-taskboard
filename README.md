@@ -27,9 +27,11 @@ phone.
   the way Task Manager counts it. Sort by CPU or memory, search, group by
   agent.
 - **Agents** — the total CPU and memory of each agent and workspace, its
-  biggest process and how the attribution was made: `exact` (a tmux pane
-  PiCode started), `likely` (the process folder matches a workspace) or
-  `unknown`. The count is never presented as fact when it is a guess.
+  biggest process and how the attribution was made: `likely` (a
+  COGNIX[WS] terminal name or the process folder), or `unknown` when
+  neither matches. This version does not claim `exact`; a terminal id door
+  would be needed for that. The count is never presented as fact when it
+  is a guess.
 - **Performance** — machine totals over time, in memory for the last two
   minutes. No database in v1: the history is a derived cache and does not
   enter backups.
