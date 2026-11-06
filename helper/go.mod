@@ -1,3 +1,3 @@
-module github.com/cognixws/picode-taskboard/helper
+module github.com/cognixws/cognix-taskboard/helper
 
 go 1.22
