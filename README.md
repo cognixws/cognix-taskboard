@@ -2,7 +2,7 @@
 
 A COGNIX[WS] extension: the processes of this machine in the bottom dock,
 with the agent or workspace that owns each one. Same shape as
-[Docboard](https://github.com/cognixws/picode-docboard): a supervised
+[Docboard](https://github.com/cognixws/cognix-docboard): a supervised
 process, one isolated page, a bottom-dock tab and consent bound to the
 content digest.
 
@@ -13,7 +13,7 @@ Person-only. No MCP server, no agent capability, no network.
 In COGNIX[WS]: **Extensions → Install**, with the repository URL:
 
 ```
-https://github.com/cognixws/picode-taskboard
+https://github.com/cognixws/cognix-taskboard
 ```
 
 It adds the **Processes** tab to the bottom dock and the Taskboard tile to
